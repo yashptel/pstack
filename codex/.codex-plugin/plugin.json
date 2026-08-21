@@ -1,0 +1,9 @@
+{
+  "name": "pstack",
+  "version": "0.14.2-port.1",
+  "description": "if you want to go fast, go deep first. rigorous agent workflows you can parallelize with confidence. a port of poteto's pstack for Codex.",
+  "author": { "name": "Lauren Tan" },
+  "homepage": "https://github.com/yashptel/pstack",
+  "license": "MIT",
+  "skills": "./skills/"
+}

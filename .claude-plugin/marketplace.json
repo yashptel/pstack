@@ -1,0 +1,8 @@
+{
+  "name": "pstack",
+  "owner": { "name": "Yash Patel" },
+  "metadata": { "description": "pstack ported for Claude Code and Codex." },
+  "plugins": [
+    { "name": "pstack", "source": "./claude-code" }
+  ]
+}
