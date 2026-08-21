@@ -2,11 +2,18 @@
   "name": "pstack",
   "description": "if you want to go fast, go deep first. rigorous agent workflows you can parallelize with confidence. a port of poteto's pstack for Claude Code.",
   "version": "0.14.2-port.1",
-  "author": { "name": "Lauren Tan" },
+  "author": {
+    "name": "Lauren Tan"
+  },
   "homepage": "https://github.com/yashptel/pstack",
   "repository": "https://github.com/yashptel/pstack",
   "license": "MIT",
-  "keywords": ["pstack", "poteto-mode", "workflow", "principles", "subagents", "unslop"],
-  "skills": "./skills/",
-  "agents": "./agents/"
+  "keywords": [
+    "pstack",
+    "poteto-mode",
+    "workflow",
+    "principles",
+    "subagents",
+    "unslop"
+  ]
 }
