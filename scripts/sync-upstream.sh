@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# Report upstream pstack changes since the recorded baseline.
+#
+# Nothing here merges anything. The two trees are hand-maintained and diverge
+# from upstream by design, so an upstream hunk is a decision to re-make, not a
+# conflict to resolve. This script says what moved and where it would land.
+#
+# Usage: scripts/sync-upstream.sh [--dry-run]   (writes sync-report.md)
+set -euo pipefail
+
+DRY_RUN=${1:-}
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+BASE=$(python3 -c "import json;print(json.load(open('.sync-baseline.json'))['baseline_sha'])")
+
+git remote get-url upstream >/dev/null 2>&1 || git remote add upstream https://github.com/cursor/plugins
+git fetch -q upstream main
+HEAD_SHA=$(git rev-parse upstream/main)
+
+if [ "$BASE" = "$HEAD_SHA" ]; then
+  echo "up to date at $BASE"
+  exit 0
+fi
+
+CHANGED=$(git diff --name-only "$BASE" "$HEAD_SHA" -- pstack/ || true)
+if [ -z "$CHANGED" ]; then
+  echo "upstream moved ($BASE -> $HEAD_SHA) but nothing under pstack/ changed"
+  exit 0
+fi
+
+# Where an upstream path lands in this repo. Echoes zero or more local paths.
+destinations() {
+  case "$1" in
+    pstack/automations/*) return 0 ;;                       # not ported
+    pstack/docs/guide/*)  echo "docs/${1#pstack/docs/}" ;;   # single shared copy
+    pstack/skills/*|pstack/agents/*)
+      rel="${1#pstack/}"
+      echo "claude-code/$rel"
+      echo "codex/$rel" ;;
+    pstack/README.md)     echo "README.md" ;;
+    pstack/.cursor-plugin/plugin.json)
+      echo "claude-code/.claude-plugin/plugin.json"
+      echo "codex/.codex-plugin/plugin.json" ;;
+    *) return 0 ;;
+  esac
+}
+
+# Did we keep this file as upstream had it at the baseline, or rewrite it?
+# Comparing against the BASELINE (not upstream HEAD) is the point: a difference
+# means a deliberate port edit, not just upstream drift.
+classify() {
+  local local_path="$1" upstream_path="$2"
+  [ -e "$local_path" ] || { echo dropped; return; }
+  local n
+  n=$(git show "$BASE:$upstream_path" 2>/dev/null | diff - "$local_path" 2>/dev/null | grep -c '^[<>]' || true)
+  if [ "${n:-0}" -eq 0 ]; then echo "verbatim 0"
+  elif [ "${n:-0}" -le 6 ]; then echo "light $n"
+  else echo "rewritten $n"
+  fi
+}
+
+{
+  echo "## Upstream pstack moved"
+  echo
+  echo "\`$BASE\` → \`$HEAD_SHA\`"
+  echo
+  echo "Nothing here is merged automatically. Work the checklist, apply each change to **both trees**"
+  echo "by hand, then merge this PR — merging is what records the new baseline."
+  echo
+  echo "### Checklist"
+  echo
+
+  mechanical=0; decisions=0; dropped=0
+  while IFS= read -r up; do
+    [ -n "$up" ] || continue
+    dests=$(destinations "$up")
+    if [ -z "$dests" ]; then
+      echo "- [ ] \`$up\` — **not carried by this port** (benny, or a Cursor-only file); confirm it should stay that way"
+      dropped=$((dropped+1))
+      continue
+    fi
+    while IFS= read -r d; do
+      [ -n "$d" ] || continue
+      read -r kind n <<< "$(classify "$d" "$up")"
+      case "$kind" in
+        verbatim)
+          echo "- [ ] \`$d\` — identical to upstream at baseline, so this is **mechanical**: apply the hunk"
+          mechanical=$((mechanical+1)) ;;
+        light)
+          echo "- [ ] \`$d\` — diverges from baseline by only $n lines (likely the sigil/path pass), so this is **probably mechanical**; check the hunk does not touch a ported line"
+          mechanical=$((mechanical+1)) ;;
+        rewritten)
+          echo "- [ ] \`$d\` — **rewritten for this host** ($n lines diverge); re-make the decision, do not paste the hunk"
+          decisions=$((decisions+1)) ;;
+        dropped)
+          echo "- [ ] \`$d\` — missing locally; decide whether it should now exist"
+          dropped=$((dropped+1)) ;;
+      esac
+    done <<< "$dests"
+  done <<< "$CHANGED"
+
+  echo
+  echo "$mechanical mechanical or near-mechanical, $decisions needing a decision, $dropped not carried."
+  echo
+  echo "### Upstream diff"
+  echo
+  echo '```diff'
+  git diff "$BASE" "$HEAD_SHA" -- pstack/ | head -c 40000
+  echo '```'
+  echo
+  echo "_Diff truncated at 40 KB if longer; run \`git diff $BASE $HEAD_SHA -- pstack/\` for the rest._"
+} > sync-report.md
+
+echo "wrote sync-report.md ($(wc -l < sync-report.md) lines)"
+
+if [ "$DRY_RUN" = "--dry-run" ]; then exit 0; fi
+
+BRANCH="sync/upstream-${HEAD_SHA:0:7}"
+git checkout -qB "$BRANCH"
+python3 - "$HEAD_SHA" <<'PY'
+import json,sys,datetime
+p='.sync-baseline.json'; d=json.load(open(p))
+d['baseline_sha']=sys.argv[1]
+d['baseline_date']=datetime.date.today().isoformat()
+json.dump(d,open(p,'w'),indent=2); open(p,'a').write('\n')
+PY
+git add .sync-baseline.json
+git -c user.name="pstack sync" -c user.email="noreply@github.com" \
+  commit -qm "Sync baseline to upstream ${HEAD_SHA:0:7}"
+git push -qf origin "$BRANCH"
+gh pr create --title "Upstream sync: ${HEAD_SHA:0:7}" --body-file sync-report.md --head "$BRANCH" --base main
