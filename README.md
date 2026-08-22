@@ -23,6 +23,14 @@ codex plugin marketplace add yashptel/pstack --sparse codex/
 codex plugin add pstack@pstack
 ```
 
+**Codex also needs its subagents installed by hand.** Codex plugins do not activate shipped subagents: on codex-cli 0.149.0 the plugin's `agents/*.toml` are copied into the plugin cache but never registered, and the same file placed in `~/.codex/agents/` registers immediately. Copy them across:
+
+```bash
+cp ~/.codex/plugins/cache/pstack/pstack/*/agents/*.toml ~/.codex/agents/
+```
+
+Without this, `no-comments` and `poteto-mode` will reference subagents Codex cannot spawn.
+
 Skills are namespaced on both hosts. Claude Code invokes them as `/pstack:poteto-mode`; Codex as `$pstack:poteto-mode`.
 
 ## Get started
@@ -55,10 +63,15 @@ Upstream runs on Cursor, which offers two things neither host here does: a **mod
 | `recall`, `reflect`, `automate-me`, `show-me-your-work` | transcripts scoped by workspace directory | transcripts filtered by each session's `payload.cwd` — Codex files sessions by date, not by workspace |
 | `reflect`, `automate-me`, `poteto-mode` › `authoring-a-skill` | skill authoring inlined — no built-in `create-skill` | same |
 | `poteto-mode` UI/CLI verification | harness inlined — no `control-ui` / `control-cli` | same |
+| `comment-sicko`, `poteto-agent` subagents | ship with the plugin | **must be copied to `~/.codex/agents/` by hand** — plugin subagents do not activate |
 
 Where upstream says "a different model family", this port says "a different model". On a single-vendor host the stronger claim would simply be false, and a review you trust for the wrong reason is worse than one you don't.
 
 **Not ported:** `automations/benny/`, upstream's Slack triage and repro pack. It is built on Cursor's automations product — the skills are prompts fired by Slack events, not skills anyone invokes — and neither host has an equivalent trigger. It stays [upstream](https://github.com/cursor/plugins/tree/main/pstack/automations/benny).
+
+### A note on Codex skill budget
+
+44 skills is a lot for one plugin. Codex warns that *"skill descriptions were shortened to fit the skills context budget"* when pstack is installed alongside other plugins. Everything still works — Codex sees every skill — but if you rely on model-invoked triggering rather than typing `$pstack:<name>`, consider disabling plugins you are not using.
 
 ## Versioning and syncing
 
