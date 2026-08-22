@@ -23,7 +23,11 @@ if [ "$BASE" = "$HEAD_SHA" ]; then
   exit 0
 fi
 
-CHANGED=$(git diff --name-only "$BASE" "$HEAD_SHA" -- pstack/ || true)
+# --name-status, not --name-only: the status letter is what tells a deletion
+# apart from an edit. Without it an upstream delete reads as a routine hunk.
+# --no-renames keeps renames as a delete plus an add, which is what the
+# checklist wants anyway (two files to act on, in two trees).
+CHANGED=$(git diff --no-renames --name-status "$BASE" "$HEAD_SHA" -- pstack/ || true)
 if [ -z "$CHANGED" ]; then
   echo "upstream moved ($BASE -> $HEAD_SHA) but nothing under pstack/ changed"
   exit 0
@@ -71,17 +75,35 @@ classify() {
   echo "### Checklist"
   echo
 
-  mechanical=0; decisions=0; dropped=0
-  while IFS= read -r up; do
+  mechanical=0; decisions=0; dropped=0; removals=0; additions=0
+  while IFS=$'\t' read -r status up; do
     [ -n "$up" ] || continue
     dests=$(destinations "$up")
     if [ -z "$dests" ]; then
-      echo "- [ ] \`$up\` — **not carried by this port** (benny, or a Cursor-only file); confirm it should stay that way"
+      echo "- [ ] \`$up\` ($status) — **not carried by this port** (benny, or a Cursor-only file); confirm it should stay that way"
       dropped=$((dropped+1))
       continue
     fi
     while IFS= read -r d; do
       [ -n "$d" ] || continue
+
+      case "$status" in
+        D*)
+          if [ -e "$d" ]; then
+            echo "- [ ] \`$d\` — **upstream DELETED this file**; delete your copy (check nothing in this tree still references it)"
+          else
+            echo "- [ ] \`$d\` — upstream deleted it and this tree does not have it; nothing to do"
+          fi
+          removals=$((removals+1)); continue ;;
+        A*)
+          if [ -e "$d" ]; then
+            echo "- [ ] \`$d\` — upstream ADDED this file and this tree already has one; reconcile the two"
+          else
+            echo "- [ ] \`$d\` — **new upstream file**; port it into this tree (apply the sigil, path, model, and spawn passes)"
+          fi
+          additions=$((additions+1)); continue ;;
+      esac
+
       read -r kind n <<< "$(classify "$d" "$up")"
       case "$kind" in
         verbatim)
@@ -101,7 +123,7 @@ classify() {
   done <<< "$CHANGED"
 
   echo
-  echo "$mechanical mechanical or near-mechanical, $decisions needing a decision, $dropped not carried."
+  echo "$mechanical mechanical or near-mechanical, $decisions needing a decision, $additions added upstream, $removals deleted upstream, $dropped not carried."
   echo
   echo "### Upstream diff"
   echo
