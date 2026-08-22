@@ -129,4 +129,9 @@ git add .sync-baseline.json
 git -c user.name="pstack sync" -c user.email="noreply@github.com" \
   commit -qm "Sync baseline to upstream ${HEAD_SHA:0:7}"
 git push -qf origin "$BRANCH"
-gh pr create --title "Upstream sync: ${HEAD_SHA:0:7}" --body-file sync-report.md --head "$BRANCH" --base main
+# -R is not optional: the `upstream` remote points at cursor/plugins, and gh
+# will happily resolve to it and try to open the PR against poteto's repo.
+ORIGIN_REPO=$(git remote get-url origin | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')
+gh pr create -R "$ORIGIN_REPO" \
+  --title "Upstream sync: ${HEAD_SHA:0:7}" \
+  --body-file sync-report.md --head "$BRANCH" --base main
