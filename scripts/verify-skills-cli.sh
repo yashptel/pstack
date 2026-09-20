@@ -11,8 +11,9 @@ if ! grep -Eq "Found[[:space:]]+$expected[[:space:]]+skills" <<< "$output"; then
 fi
 
 tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
-(cd "$tmp" && npx --yes skills add "$root" --agent claude-code --skill poteto-mode --copy --yes --json > install.json)
+codex_tmp=$(mktemp -d)
+trap 'rm -rf "$tmp" "$codex_tmp"' EXIT
+(cd "$tmp" && npx --yes skills add "$root" --agent claude-code --skill poteto-mode --copy --yes --json > /dev/null)
 installed="$tmp/.claude/skills/poteto-mode/SKILL.md"
 [ -f "$installed" ] || {
 	printf 'skills CLI verification failed: targeted install did not create %s\n' "$installed" >&2
@@ -23,4 +24,15 @@ cmp -s "$root/.agents/skills/poteto-mode/SKILL.md" "$installed" || {
 	exit 1
 }
 
-printf 'skills CLI discovered %s portable skills and copied poteto-mode correctly\n' "$expected"
+(cd "$codex_tmp" && npx --yes skills add "$root" --agent codex --skill poteto-mode --copy --yes --json > /dev/null)
+codex_installed="$codex_tmp/.agents/skills/poteto-mode/SKILL.md"
+[ -f "$codex_installed" ] || {
+	printf 'skills CLI verification failed: Codex targeted install did not create %s\n' "$codex_installed" >&2
+	exit 1
+}
+cmp -s "$root/.agents/skills/poteto-mode/SKILL.md" "$codex_installed" || {
+	printf 'skills CLI verification failed: Codex targeted install differs from portable source\n' >&2
+	exit 1
+}
+
+printf 'skills CLI discovered %s portable skills and copied poteto-mode correctly for Claude Code and Codex\n' "$expected"

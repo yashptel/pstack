@@ -31,15 +31,23 @@ cp ~/.codex/plugins/cache/pstack/pstack/*/agents/*.toml ~/.codex/agents/
 
 Without this, `no-comments` and `poteto-mode` will reference subagents Codex cannot spawn.
 
-**Any Agent Skills-compatible harness** — install the portable catalog with the [Skills CLI](https://www.skills.sh/docs/cli):
+For any Agent Skills-compatible harness, install the portable catalog with the [Skills CLI](https://www.skills.sh/docs/cli).
 
 ```bash
-npx skills add yashptel/pstack --all
+npx skills add yashptel/pstack#0.15.2-port.2 --all
 ```
 
-The portable catalog lives in `.agents/skills/`, so the CLI can target Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot, and other supported harnesses. Use `--agent` to select a target or `--skill` to install only the skills you need. This installs skill prompts and their adjacent assets; host plugin manifests and Codex subagent registrations still require the native install above.
+This project-local install writes to `.agents/skills/` in the current directory. Use it when the skills belong to one project. `--all` selects every skill and supported target. The install remains in the current directory, so a temporary-directory install is visible only when that directory is the host workspace.
 
-Skills are namespaced on both hosts. Claude Code invokes them as `/pstack:poteto-mode`; Codex as `$pstack:poteto-mode`.
+For a Codex or OMP-wide install, use `--global`:
+
+```bash
+npx skills add yashptel/pstack#0.15.2-port.2 --all --global
+```
+
+The global install writes to user-level skill directories. Codex and OMP can then discover the skills from other projects. Use `--agent` to select a target or `--skill` to install only the skills you need. This installs skill prompts and their adjacent assets. Host plugin manifests and Codex subagent registrations still require the native install above.
+
+Portable Skills CLI names are unnamespaced. Codex invokes `poteto-mode` as `$poteto-mode`. OMP lists it as `skill:poteto-mode`. The native plugin surface uses the `pstack` namespace. Claude Code invokes `/pstack:poteto-mode`; Codex invokes `$pstack:poteto-mode`.
 
 ## Get started
 
@@ -76,7 +84,7 @@ Upstream runs on Cursor, which offers two things neither host here does: a **mod
 
 Where upstream says "a different model family", this port says "a different model". On a single-vendor host the stronger claim would simply be false, and a review you trust for the wrong reason is worse than one you don't.
 
-**Not ported:** `automations/benny/`, upstream's Slack triage and repro pack, `make-bot-ui`, which depends on Cursor-only routines, webhooks, and UI tooling, and the expanded Cursor-specific multi-phase plan checker. They are not honest portable behavior. Benny stays [upstream](https://github.com/cursor/plugins/tree/main/pstack/automations/benny).
+**Not ported:** `automations/benny/`, upstream's Slack triage and repro pack, `make-bot-ui`, which depends on Cursor-only routines, webhooks, and UI tooling, and the expanded Cursor-specific multi-phase plan checker. Benny stays [upstream](https://github.com/cursor/plugins/tree/main/pstack/automations/benny).
 
 ### A note on Codex skill budget
 
@@ -84,7 +92,7 @@ Where upstream says "a different model family", this port says "a different mode
 
 ## Versioning and syncing
 
-Versions track upstream with a port suffix: `0.15.2-port.2` is upstream `0.15.2` plus port revision 2. The upstream commit this port has been reconciled against lives in [`.sync-baseline.json`](./.sync-baseline.json). `scripts/sync-upstream.sh` is report-only by default. CI passes `--publish` after the report has been reviewed so local audits cannot create branches or pull requests by accident.
+Versions track upstream with a port suffix: `0.15.2-port.2` is upstream `0.15.2` plus port revision 2. The upstream commit this port has been reconciled against lives in [`.sync-baseline.json`](./.sync-baseline.json). `scripts/sync-upstream.sh` is report-only by default. CI passes `--publish` after the report has been reviewed.
 
 Maintainers can verify the three contracts directly:
 
