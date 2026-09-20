@@ -4,7 +4,7 @@ set -euo pipefail
 root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 expected=$(find "$root/.agents/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 
-output=$(npx --yes skills add "$root" --list 2>&1)
+output=$(npx --yes skills add "$root" --list 2>&1 | sed $'s/\033\\[[0-9;]*m//g')
 if ! grep -Eq "Found[[:space:]]+$expected[[:space:]]+skills" <<< "$output"; then
 	printf 'skills CLI verification failed: expected %s skills\n%s\n' "$expected" "$output" >&2
 	exit 1
