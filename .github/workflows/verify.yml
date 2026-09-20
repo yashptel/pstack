@@ -1,0 +1,33 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  repository-check:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Portable catalog
+            command: scripts/verify-portable.sh
+          - name: Model neutrality
+            command: scripts/verify-model-neutral.sh
+          - name: Skills CLI
+            command: scripts/verify-skills-cli.sh
+          - name: Upstream sync regression
+            command: scripts/sync-upstream.test.sh
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        if: matrix.command == 'scripts/verify-skills-cli.sh'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run ${{ matrix.name }}
+        run: ${{ matrix.command }}
