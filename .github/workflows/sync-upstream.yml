@@ -19,4 +19,4 @@ jobs:
       - name: Report upstream changes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: scripts/sync-upstream.sh
+        run: scripts/sync-upstream.sh --publish
