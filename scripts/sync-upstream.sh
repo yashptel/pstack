@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
-# Report upstream pstack changes since the recorded baseline.
-#
-# Nothing here merges anything. The two trees are hand-maintained and diverge
-# from upstream by design, so an upstream hunk is a decision to re-make, not a
-# conflict to resolve. This script says what moved and where it would land.
-#
-# Usage: scripts/sync-upstream.sh [--dry-run]   (writes sync-report.md)
 set -euo pipefail
 
-DRY_RUN=${1:-}
+MODE=${1:---dry-run}
+case "$MODE" in
+  --dry-run|--publish) ;;
+  *) echo "usage: $0 [--dry-run|--publish]" >&2; exit 2 ;;
+esac
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
@@ -38,7 +35,12 @@ destinations() {
   case "$1" in
     pstack/automations/*) return 0 ;;                       # not ported
     pstack/docs/guide/*)  echo "docs/${1#pstack/docs/}" ;;   # single shared copy
-    pstack/skills/*|pstack/agents/*)
+    pstack/skills/*)
+      rel="${1#pstack/}"
+      echo "claude-code/$rel"
+      echo "codex/$rel"
+      echo ".agents/$rel" ;;
+    pstack/agents/*)
       rel="${1#pstack/}"
       echo "claude-code/$rel"
       echo "codex/$rel" ;;
@@ -69,7 +71,7 @@ classify() {
   echo
   echo "\`$BASE\` → \`$HEAD_SHA\`"
   echo
-  echo "Nothing here is merged automatically. Work the checklist, apply each change to **both trees**"
+  echo "Nothing here is merged automatically. Work the checklist, apply each change to the host trees and portable catalog"
   echo "by hand, then merge this PR — merging is what records the new baseline."
   echo
   echo "### Checklist"
@@ -136,7 +138,7 @@ classify() {
 
 echo "wrote sync-report.md ($(wc -l < sync-report.md) lines)"
 
-if [ "$DRY_RUN" = "--dry-run" ]; then exit 0; fi
+if [ "$MODE" = "--dry-run" ]; then exit 0; fi
 
 BRANCH="sync/upstream-${HEAD_SHA:0:7}"
 git checkout -qB "$BRANCH"

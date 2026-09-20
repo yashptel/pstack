@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# Checks that sync-upstream.sh distinguishes an upstream delete and an upstream
-# add from an ordinary edit. A deletion reported as "apply the hunk" is the
-# failure this guards: it reads as a routine edit and silently means "remove
-# your copy". Run: scripts/sync-upstream.test.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,10 +19,9 @@ printf 'brand new\n' > "$UP/pstack/skills/fresh.md"
 git -C "$UP" add -A
 git -C "$UP" -c user.email=t@t -c user.name=t commit -qm head
 
-# A fake port that carries the two baseline files verbatim.
-PORT="$TMP/port"; mkdir -p "$PORT/claude-code/skills" "$PORT/codex/skills" "$PORT/scripts"
+PORT="$TMP/port"; mkdir -p "$PORT/claude-code/skills" "$PORT/codex/skills" "$PORT/.agents/skills" "$PORT/scripts"
 cp "$ROOT/scripts/sync-upstream.sh" "$PORT/scripts/"
-for t in claude-code codex; do
+for t in claude-code codex .agents; do
   printf 'baseline\n' > "$PORT/$t/skills/edited.md"
   printf 'goes away\n' > "$PORT/$t/skills/doomed.md"
 done
@@ -44,6 +39,11 @@ git -C "$UP" branch -M main 2>/dev/null || true
 ( cd "$PORT" && ./scripts/sync-upstream.sh --dry-run >/dev/null )
 REPORT="$PORT/sync-report.md"
 
+BEFORE_BRANCH=$(git -C "$PORT" branch --show-current)
+( cd "$PORT" && ./scripts/sync-upstream.sh >/dev/null )
+AFTER_BRANCH=$(git -C "$PORT" branch --show-current)
+[ "$BEFORE_BRANCH" = "$AFTER_BRANCH" ] || { echo "FAIL default mode changed the current branch"; exit 1; }
+
 fail=0
 check() { if grep -q "$2" "$REPORT"; then echo "  ok   $1"; else echo "  FAIL $1"; fail=1; fi; }
 
@@ -51,6 +51,7 @@ echo "sync-upstream report classification:"
 check "upstream delete is called a delete"        'skills/doomed.md` — \*\*upstream DELETED this file\*\*'
 check "upstream add is called new"                'skills/fresh.md` — \*\*new upstream file\*\*'
 check "ordinary edit still classifies mechanical" 'skills/edited.md` — identical to upstream at baseline'
+check "portable catalog is included"              '\.agents/skills/edited.md` — identical to upstream at baseline'
 if grep -A0 'doomed.md' "$REPORT" | grep -q 'apply the hunk'; then
   echo "  FAIL deletion still reads as 'apply the hunk'"; fail=1
 else
