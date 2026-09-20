@@ -25,7 +25,7 @@ Resolve what is in scope vs explicitly out, technical or platform constraints, p
 Delegate codebase exploration (the **guard-the-context-window** principle skill).
 
 - Prefer `subagent_type: "pstack:poteto-agent"`. the general-purpose agent is the fallback. Never use the built-in `plan` subagent_type; it ignores this skill.
-- Pass `model:` explicitly per the configured roles (defaults `sonnet` for code, `fable` for judgment).
+- Pass `model:` explicitly when the role is configured. If no role model is configured, omit the field so the current host's model is used.
 
 Each explorer returns file pointers, conventions, dependencies, test infrastructure, and entry points. No inlined dumps.
 

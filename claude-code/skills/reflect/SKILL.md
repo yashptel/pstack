@@ -34,19 +34,19 @@ For each candidate, read the first JSONL line and check that `message.content[0]
 
 ### 2. Spawn three reviewers in parallel
 
-One message, three Agent-tool calls on the general-purpose agent, explicit `model:` on each, with tools granted (not read-only). Reviewers need MCP access for context lookups (tickets, chat threads, observability traces referenced in the transcript); readonly strips MCPs. The prompt forbids file writes; the parent applies edits.
+One message, three Agent-tool calls on the general-purpose agent, using each configured role model when available and omitting `model:` for an unconfigured role so the current host's model is used, with tools granted (not read-only). Reviewers need MCP access for context lookups (tickets, chat threads, observability traces referenced in the transcript); readonly strips MCPs. The prompt forbids file writes; the parent applies edits.
 
 | Lens | `model` | Prompt template |
 |---|---|---|
-| Judgment | your configured reflect-judgment model (default `fable`) | `references/judgment-reviewer.md` |
-| Tooling | your configured reflect-tooling model (default `opus`) | `references/tooling-reviewer.md` |
-| Divergent | your configured reflect-judgment model (default `fable`) | `references/divergent-reviewer.md` |
+| Judgment | your configured reflect-judgment model; otherwise omit the field and use the current host's model | `references/judgment-reviewer.md` |
+| Tooling | your configured reflect-tooling model; otherwise omit the field and use the current host's model | `references/tooling-reviewer.md` |
+| Divergent | your configured reflect-judgment model; otherwise omit the field and use the current host's model | `references/divergent-reviewer.md` |
 
 Pass each template verbatim, substituting the transcript path or digest where marked. Reviewers return findings in the subagent response body.
 
 ### 3. Synthesize
 
-One Agent-tool call on the general-purpose agent, using your configured reflect-judgment model (default `fable`), with tools granted (not read-only). The synthesizer's quality check includes spot-verifying citations, which can require MCP access; readonly strips MCPs. Use `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. The synthesizer returns a structured Accepted / Rejected / Backlog list.
+One Agent-tool call on the general-purpose agent, using your configured reflect-judgment model. If none is configured, omit the model field so the current host's model is used. Grant tools (not read-only). The synthesizer's quality check includes spot-verifying citations, which can require MCP access; readonly strips MCPs. Use `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. The synthesizer returns a structured Accepted / Rejected / Backlog list.
 
 ### 4. Structural enforcement check
 

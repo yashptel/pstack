@@ -5,25 +5,25 @@ description: Configure which models pstack uses per role. Detects your available
 
 # Setup pstack
 
-Write `~/.claude/pstack-models.md`, a plain markdown file that sets pstack's model per role. The skills read it and fall back to their inline defaults when a line is absent, so this is an override layer, not a requirement.
+Write `~/.claude/pstack-models.md`, a plain markdown file that sets pstack's model per role. The skills read it and fall back to the current host's model when a line is absent, so this is an override layer, not a requirement.
 
 ## Steps
 
 ### 1. Detect available models
 
-Enumerate the model slugs you can pass to an Agent-tool subagent in this session; that is the dependable source. If the host exposes a models API or CLI that lists your entitled models, prefer it for completeness. If you cannot detect any, ask the user to paste the slugs they have access to. Never write a real slug you have not confirmed is available. The aliases `inherit-parent` and `auto` are always valid even though they are not detected slugs.
+Enumerate the model identifiers you can pass to an Agent-tool subagent in this session; that is the dependable source. If the host exposes a models API or CLI that lists your entitled models, prefer it for completeness. If you cannot detect any, ask the user to paste the identifiers they have access to. Never write an identifier you have not confirmed is available. The aliases `inherit-parent` and `auto` are always valid even though they are not detected identifiers.
 
 ### 2. Load current state
 
-The default role-to-model mapping is the rule shape shown in step 5 below. If `~/.claude/pstack-models.md` already exists, read it and treat its values as the current choices. Otherwise start from those defaults.
+The role-to-model mapping is the rule shape shown in step 5 below. If `~/.claude/pstack-models.md` already exists, read it and treat its values as the current choices. Otherwise omit model overrides so roles use the current host's model.
 
 ### 3. Map and confirm
 
-Show every role with its current model, marking any real slug not in the detected set as needing a choice. Ask whether to accept as-is or change specific roles, offering the detected models plus `inherit-parent` and `auto` (both mean: this role runs on the parent chat model, which is how Auto users stay on Auto) as the options. Prefer AskQuestion over free text. For panel roles (how critics, arena runners, architect runners, interrogate reviewers) the value is a list, and one subagent runs per entry, alias entries included, so the list length sets the count. `arena cross-judge pool` is also a list, but Arena selects one value from it whose model family differs from the parent's when possible. `swarm workers` is the default model for every worker unless a race or comparison assigns another model per arm.
+Show every role with its current model, marking any real identifier not in the detected set as needing a choice. Ask whether to accept as-is or change specific roles, offering the detected models plus `inherit-parent` and `auto` (both mean: this role runs on the parent chat model, which is how Auto users stay on Auto) as the options. Prefer AskQuestion over free text. For panel roles (how critics, arena runners, architect runners, interrogate reviewers) the value is a list, and one subagent runs per entry, alias entries included, so the list length sets the count. `arena cross-judge pool` is also a list, but Arena selects one value from it whose model family differs from the parent's when possible. `swarm workers` is the configured model for every worker unless a race or comparison assigns another model per arm.
 
 ### 4. Validate
 
-Every real slug written must be in the detected set; `inherit-parent` and `auto` always pass. If a chosen real slug is not available, stop and ask again. A rule pointing at a model the user cannot use breaks every delegation that reads it.
+Every real identifier written must be in the detected set; `inherit-parent` and `auto` always pass. If a chosen real identifier is not available, stop and ask again. A rule pointing at a model the user cannot use breaks every delegation that reads it.
 
 ### 5. Write the rule
 
@@ -34,26 +34,26 @@ Write `~/.claude/pstack-models.md` and one line per role, using the same labels 
 description: pstack per-role model choices (overrides skill defaults)
 alwaysApply: true
 ---
-# pstack model configuration. One line per role. Delete a line to fall back to the skill default.
+# pstack model configuration. One line per role. Delete a line to use the current host's model.
 # `inherit-parent` or `auto` as a value: the role runs on the parent chat model (omit Task `model`). Alias entries in a panel list still count toward its fan-out.
-feature, refactoring: sonnet
-bug-fix: opus
-perf-issue: opus
-hillclimb: opus
-judgment and prose: fable
-hardest tasks: fable
-how explorer: sonnet
-how explainer: fable
-how critics: fable, opus, sonnet, opus
-why investigators: sonnet
-why synthesizer: fable
-reflect tooling: opus
-reflect judgment, divergent, synthesizer: fable
-arena runners: fable, opus, sonnet, opus
-arena cross-judge pool: fable, opus, sonnet, opus
-swarm workers: sonnet
-architect runners: fable, opus, sonnet, opus
-interrogate reviewers: fable, opus, sonnet, opus
+feature, refactoring: inherit-parent
+bug-fix: inherit-parent
+perf-issue: inherit-parent
+hillclimb: inherit-parent
+judgment and prose: inherit-parent
+hardest tasks: inherit-parent
+how explorer: inherit-parent
+how explainer: inherit-parent
+how critics: inherit-parent, inherit-parent, inherit-parent, inherit-parent
+why investigators: inherit-parent
+why synthesizer: inherit-parent
+reflect tooling: inherit-parent
+reflect judgment, divergent, synthesizer: inherit-parent
+arena runners: inherit-parent, inherit-parent, inherit-parent, inherit-parent
+arena cross-judge pool: inherit-parent, inherit-parent, inherit-parent, inherit-parent
+swarm workers: inherit-parent
+architect runners: inherit-parent, inherit-parent, inherit-parent, inherit-parent
+interrogate reviewers: inherit-parent, inherit-parent, inherit-parent, inherit-parent
 ```
 
 ### 6. Confirm

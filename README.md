@@ -1,8 +1,8 @@
 # pstack
 
-A port of [pstack](https://github.com/cursor/plugins/tree/main/pstack) by [poteto](https://github.com/poteto) (Lauren Tan) for **Claude Code** and **Codex**.
+A port of [pstack](https://github.com/cursor/plugins/tree/main/pstack) by [poteto](https://github.com/poteto) (Lauren Tan) for **Claude Code**, **Codex**, and Agent Skills-compatible harnesses.
 
-Upstream pstack is a Cursor plugin: 44 skills for rigorous agent engineering — planning, verification, review panels, PR babysitting, overnight runs. This repo carries all 44 to two other hosts. It is a port, not a rewrite; the skills are poteto's.
+Upstream pstack is a Cursor plugin for rigorous agent engineering — planning, verification, review panels, PR babysitting, overnight runs. This repo carries 46 host-compatible skills to Claude Code, Codex, and any harness that implements the Agent Skills format. It is a port, not a rewrite; the skills are poteto's.
 
 ## Install
 
@@ -31,11 +31,19 @@ cp ~/.codex/plugins/cache/pstack/pstack/*/agents/*.toml ~/.codex/agents/
 
 Without this, `no-comments` and `poteto-mode` will reference subagents Codex cannot spawn.
 
+**Any Agent Skills-compatible harness** — install the portable catalog with the [Skills CLI](https://www.skills.sh/docs/cli):
+
+```bash
+npx skills add yashptel/pstack --all
+```
+
+The portable catalog lives in `.agents/skills/`, so the CLI can target Claude Code, Codex, Cursor, Gemini CLI, GitHub Copilot, and other supported harnesses. Use `--agent` to select a target or `--skill` to install only the skills you need. This installs skill prompts and their adjacent assets; host plugin manifests and Codex subagent registrations still require the native install above.
+
 Skills are namespaced on both hosts. Claude Code invokes them as `/pstack:poteto-mode`; Codex as `$pstack:poteto-mode`.
 
 ## Get started
 
-1. Run `setup-pstack` and choose your models. It writes `~/.claude/pstack-models.md` or `~/.codex/pstack-models.md`, a small file every skill reads. Skip it and the inline defaults apply.
+1. Run `setup-pstack` and choose any available models, or choose `inherit-parent`/`auto` to follow the current host model. It writes `~/.claude/pstack-models.md` or `~/.codex/pstack-models.md`, a small file every skill reads. Skip it and the host chooses the current model.
 2. Use `poteto-mode` whenever the work needs rigor. It reads your request, picks a playbook, and pulls in the other skills as the steps need them.
 
 The [guide](./docs/guide/README.md) walks a first real task end to end.
@@ -45,10 +53,11 @@ The [guide](./docs/guide/README.md) walks a first real task end to end.
 ```
 claude-code/    a complete Claude Code plugin  (.claude-plugin/plugin.json)
 codex/          a complete Codex plugin        (.codex-plugin/plugin.json)
+.agents/skills/ portable Agent Skills catalog  (npx skills add)
 docs/guide/     the guide, shared
 ```
 
-The two trees **share no files**. Each is written for its host, so the text you read is the text that runs — no build step, no placeholder substitution. The cost is that every upstream change is applied twice, by hand.
+The host trees **share no files**. Each is written for its host, so the text you read is the text that runs — no build step, no placeholder substitution. `.agents/skills/` is a third, host-neutral catalog for the common installer surface; it intentionally omits host plugin manifests, subagent registrations, and host-specific tool syntax. The sync report names every maintained destination so an upstream change is not applied to only one catalog.
 
 ## What this port cannot do
 
@@ -67,15 +76,24 @@ Upstream runs on Cursor, which offers two things neither host here does: a **mod
 
 Where upstream says "a different model family", this port says "a different model". On a single-vendor host the stronger claim would simply be false, and a review you trust for the wrong reason is worse than one you don't.
 
-**Not ported:** `automations/benny/`, upstream's Slack triage and repro pack. It is built on Cursor's automations product — the skills are prompts fired by Slack events, not skills anyone invokes — and neither host has an equivalent trigger. It stays [upstream](https://github.com/cursor/plugins/tree/main/pstack/automations/benny).
+**Not ported:** `automations/benny/`, upstream's Slack triage and repro pack, `make-bot-ui`, which depends on Cursor-only routines, webhooks, and UI tooling, and the expanded Cursor-specific multi-phase plan checker. They are not honest portable behavior. Benny stays [upstream](https://github.com/cursor/plugins/tree/main/pstack/automations/benny).
 
 ### A note on Codex skill budget
 
-44 skills is a lot for one plugin. Codex warns that *"skill descriptions were shortened to fit the skills context budget"* when pstack is installed alongside other plugins. Everything still works — Codex sees every skill — but if you rely on model-invoked triggering rather than typing `$pstack:<name>`, consider disabling plugins you are not using.
+46 skills is a lot for one plugin. Codex warns that *"skill descriptions were shortened to fit the skills context budget"* when pstack is installed alongside other plugins. Everything still works — Codex sees every skill — but if you rely on model-invoked triggering rather than typing `$pstack:<name>`, consider disabling plugins you are not using.
 
 ## Versioning and syncing
 
-Versions track upstream with a port suffix: `0.14.2-port.1` is upstream `0.14.2` plus port revision 1. The upstream commit this port has been reconciled against lives in [`.sync-baseline.json`](./.sync-baseline.json).
+Versions track upstream with a port suffix: `0.15.2-port.2` is upstream `0.15.2` plus port revision 2. The upstream commit this port has been reconciled against lives in [`.sync-baseline.json`](./.sync-baseline.json). `scripts/sync-upstream.sh` is report-only by default. CI passes `--publish` after the report has been reviewed so local audits cannot create branches or pull requests by accident.
+
+Maintainers can verify the three contracts directly:
+
+```bash
+scripts/verify-portable.sh
+scripts/verify-model-neutral.sh
+scripts/verify-skills-cli.sh
+scripts/sync-upstream.test.sh
+```
 
 ## License
 
