@@ -16,14 +16,14 @@ claude plugin marketplace add yashptel/pstack
 
 Then `/plugin install pstack@pstack` and `/reload-plugins`.
 
-**Codex** — `--sparse` checks out only the Codex tree:
+**Codex** — include the marketplace manifest and the Codex tree in the sparse checkout:
 
 ```bash
-codex plugin marketplace add yashptel/pstack --sparse codex/
+codex plugin marketplace add yashptel/pstack --sparse .agents/plugins --sparse codex
 codex plugin add pstack@pstack
 ```
 
-**Codex also needs its subagents installed by hand.** Codex plugins do not activate shipped subagents: on codex-cli 0.149.0 the plugin's `agents/*.toml` are copied into the plugin cache but never registered, and the same file placed in `~/.codex/agents/` registers immediately. Copy them across:
+**Codex also needs its subagents installed by hand.** Codex plugins copy the shipped `agents/*.toml` files into the plugin cache but do not register them. The same files register when placed in `~/.codex/agents/`. Copy them across:
 
 ```bash
 cp ~/.codex/plugins/cache/pstack/pstack/*/agents/*.toml ~/.codex/agents/
